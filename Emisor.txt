@@ -1,0 +1,62 @@
+//USAR EL ESQUEMATICO PARA LA UTILIZACION DE LOS PINES
+
+#include "mbed.h"
+#include "MMA8451Q.h"
+#include "nRF24L01P_PTX.h"
+
+#if   defined (TARGET_KL25Z) || defined (TARGET_KL46Z)
+  PinName const SDA = PTE25;
+  PinName const SCL = PTE24;
+#elif defined (TARGET_KL05Z)
+  PinName const SDA = PTB4;
+  PinName const SCL = PTB3;
+#elif defined (TARGET_K20D50M)
+  PinName const SDA = PTB1;
+  PinName const SCL = PTB0;
+#else
+  #error TARGET NOT DEFINED
+#endif
+#define MMA8451_I2C_ADDRESS (0x1d<<1)
+
+int main()
+{
+    MMA8451Q acc(SDA, SCL, MMA8451_I2C_ADDRESS);
+    nRF24L01P Device(PTD2, PTD3, PTC5, PTD5); // MOSI, MISO, SCK, CSN
+    nRF24L01P_PTX PTX(Device, PTA13, PTD0);  // CE, IRQ
+    PTX.Initialize();
+    PTX.SetDataRate(1000);
+    PTX.PowerUp();
+    PwmOut rled(LED1);  //ROJO
+    PwmOut gled(LED2);  //VERDE
+    PwmOut bled(LED3);  //AZUL
+    printf("MMA8451 ID: %d\r", acc.getWhoAmI());
+
+    while (true) {
+        float x, y;
+        int8_t x2, y2; 
+            x = abs(acc.getAccX());
+            y = abs(acc.getAccY());
+            x2 = acc.getAccX()*10;          //ADELANTE-ATRAS
+            y2 = acc.getAccY()*(-10);       //IZQUIERDA-DERECHA
+            bled = 0.5f - y;
+        char a,b;
+            a = (x2 + 48);                  //ADELANTE-ATRAS
+            b = (y2 + 96);                  //IZQUIERDA-DERECHA
+        if(x2 <= (-1)){
+            gled = 1.0f;
+            rled = 0.6f - x;
+            }
+        if(x2 >= 1){
+            rled = 1.0f;
+            gled = 0.6f - x;
+            }
+        if(x2 == 0){
+            rled = 1.0f;
+            gled = 1.0f;
+            }
+            PTX.TransmitPacket(&a,1);
+            PTX.TransmitPacket(&b,1);
+            
+    }
+}
+

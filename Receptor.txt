@@ -1,0 +1,56 @@
+#include "mbed.h"
+#include "nRF24L01P_PRX.h"
+
+int main()
+{
+   nRF24L01P Receiver(PTD2, PTD3, PTC5, PTD5); // MOSI, MISO, SCK, CSN
+   nRF24L01P_PRX PRX(Receiver, PTA13, PTD0);   //CE, IRQ
+   printf("Initialize\r\n");
+   PRX.Initialize();
+   printf("SetDataRate\r\n");
+   PRX.SetDataRate(1000);
+   printf("SetPayloadSize\r\n");
+   PRX.SetPayloadSize(1);
+   printf("PowerUp\r\n");
+   PRX.PowerUp();
+   printf("StartReceive\r\n");
+   PRX.StartReceive();
+   printf("Loop\r\n");
+   PwmOut rled(LED1);  //ROJO
+   PwmOut gled(LED2);  //VERDE
+   PwmOut bled(LED3);  //AZUL
+   PwmOut CH1(PTA5);  
+   PwmOut CH2(PTA4);  
+   PwmOut CH3(PTA12);  
+   PwmOut CH4(PTD4);  
+   
+   char a;
+   int val[2];
+   
+   while (true)
+   {
+      if (PRX.IsPacketReady())
+      {
+         PRX.ReadPacket(&a);
+         if(a < 72){
+             val[0] = (a - 48);                     //ADELANTE-ATRAS
+             }
+         else if(a > 72){
+             val[1] = (a - 96);                     //IZQUIERDA-DERECHA
+             }
+         if(val[0] <= (-1)){
+            gled = 1.0f;
+            rled = 0.6f - (abs(val[0]) * 0.1f);
+            }
+         if(val[0] >= 1){
+            rled = 1.0f;
+            gled = 0.6f - (abs(val[0]) * 0.1f);
+            }
+         if(val[0] == 0){
+            rled = 1.0f;
+            gled = 1.0f;
+            }
+            bled = 0.7f - (abs(val[1]) * 0.1f);  //Enciende con 0
+      }   
+   }
+}
